@@ -14,7 +14,19 @@
 - cd maskdino/modeling/pixel_decoder/ops
 - python setup.py build install
 
-### 4. 나머지 설치
+### 4. SAM설치
+- git clone https://github.com/facebookresearch/segment-anything.git && cd segment-anything
+- pip install -e .
+
+### 5. SAM2설치
+- git clone https://github.com/facebookresearch/sam2.git && cd sam2
+- pip install -e .
+
+- cd checkpoints
+- ./download_ckpts.sh
+- cd ..
+
+### 6. 나머지 설치
 - pip install fvcore omegaconf pycocotools
   
 ## 실행
@@ -23,3 +35,7 @@
 - python maskdino_demo.py --config ./configs/coco/instance-segmentation/maskdino_R50_bs16_50ep_3s.yaml --input ../Data/000.png --opts MODEL.WEIGHTS ../models/maskdino_r50_50ep_300q_hid1024_3sd1_instance_maskenhanced_mask46.1ap_box51.5ap.pth
 ### mask2former실행
 - python mask2former_demo.py --config-file ./configs/coco/instance-segmentation/swin/maskformer2_swin_large_IN21k_384_bs16_100ep.yaml --input ../Data/000.png --opts MODEL.WEIGHTS ../models/model_final_e5f453.pkl
+### SAM실행
+- python sam_demo.py
+### SAM2실행
+- python sam2_demo.py
