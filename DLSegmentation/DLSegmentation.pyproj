@@ -23,6 +23,18 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="DLSegmentation.py" />
+    <Compile Include="mask2former_demo.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="maskdino_demo.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="sam2_demo.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="sam_demo.py">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Interpreter Include="env\">
