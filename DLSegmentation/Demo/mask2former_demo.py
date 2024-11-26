@@ -8,9 +8,8 @@ import os
 # fmt: off
 import sys
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
-sys.path.append('../detectron2')
-sys.path.append('../MaskDINO')
-
+sys.path.append('../../detectron2')
+sys.path.append('../../Mask2Former')
 # fmt: on
 
 import tempfile
@@ -26,7 +25,7 @@ from detectron2.data.detection_utils import read_image
 from detectron2.projects.deeplab import add_deeplab_config
 from detectron2.utils.logger import setup_logger
 
-from maskdino import add_maskdino_config
+from mask2former import add_maskformer2_config
 from predictor import VisualizationDemo
 
 
@@ -38,7 +37,7 @@ def setup_cfg(args):
     # load config from file and command-line arguments
     cfg = get_cfg()
     add_deeplab_config(cfg)
-    add_maskdino_config(cfg)
+    add_maskformer2_config(cfg)
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
     cfg.freeze()
@@ -46,10 +45,10 @@ def setup_cfg(args):
 
 
 def get_parser():
-    parser = argparse.ArgumentParser(description="maskdino demo for builtin configs")
+    parser = argparse.ArgumentParser(description="maskformer2 demo for builtin configs")
     parser.add_argument(
         "--config-file",
-        default="./configs/coco/instance-segmentation/maskdino_R50_bs16_50ep_3s.yaml",
+        default="./configs/coco/instance-segmentation/swin/maskformer2_swin_large_IN21k_384_bs16_100ep.yaml",
         metavar="FILE",
         help="path to config file",
     )
@@ -80,7 +79,6 @@ def get_parser():
         nargs=argparse.REMAINDER,
     )
     return parser
-
 
 
 if __name__ == "__main__":
@@ -127,5 +125,4 @@ if __name__ == "__main__":
                 if cv2.waitKey(0) == 27:
                     break  # esc to quit
     
-
 

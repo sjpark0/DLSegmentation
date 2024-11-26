@@ -1,7 +1,4 @@
-import torch
-from sam2.build_sam import build_sam2
-from sam2.sam2_image_predictor import SAM2ImagePredictor
-
+from segment_anything import SamPredictor, SamAutomaticMaskGenerator, sam_model_registry
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -43,16 +40,19 @@ def show_box(box, ax):
     ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor='green', facecolor=(0,0,0,0), lw=2))    
         
 def original(image, input_point, input_label):
-    sam_checkpoint = "../models/sam2.1_hiera_large.pt"
-    model_cfg = "./configs/sam2.1/sam2.1_hiera_l.yaml"
-    
+    sam_checkpoint = '../../models/sam_vit_h_4b8939.pth'
+    model_type = "vit_h"
+
     plt.imshow(image)
     show_points(input_point, input_label, plt.gca())
     plt.axis('on')
     plt.show()
 
-    predictor = SAM2ImagePredictor(build_sam2(model_cfg, sam_checkpoint))
+    sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
+    sam.to(device='cuda')
+    predictor = SamPredictor(sam)
     predictor.set_image(image)
+    
     start = time.time()
     masks, scores, logits = predictor.predict(point_coords=input_point, point_labels=input_label, multimask_output=True,)
     end = time.time()
@@ -65,10 +65,11 @@ def original(image, input_point, input_label):
         show_points(input_point, input_label, plt.gca())
         plt.title(f"Mask {i+1}, Score: {score:.3f}", fontsize=18)
         plt.axis('off')
-        plt.show()
+        plt.show() 
+
 
 input_point = np.array([[533, 286]])
 input_label = np.array([1])
-image = cv2.imread("../Data/000.png")
+image = cv2.imread("../../Data/000.png")
 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 original(image, input_point, input_label)
