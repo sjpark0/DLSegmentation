@@ -1,4 +1,7 @@
+.vs/
 .venv/
+DLSegmentation/__pycache__
+DLSegmentation/env
 Data/
 detectron2/
 Mask2Former/
