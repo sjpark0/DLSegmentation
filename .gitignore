@@ -7,5 +7,5 @@ segment-anything/
 sam2/
 models/
 sam_models/
-sam2_models/.
+sam2_models/
 DLSegmentation/Demo/__pycache__
