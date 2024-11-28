@@ -12,3 +12,6 @@ models/
 sam_models/
 sam2_models/
 DLSegmentation/Demo/__pycache__
+3rdparty/
+bin/
+ObjectMatching/x64/
