@@ -92,61 +92,71 @@ void MPILoader(const char* foldername, float* c2w, float* w2c, float* cif, int n
     }
     
 }
-void ComputeOffset(unsigned char* image, int width, int height, int numCam, int* boundingBox, float* c2w, float* w2c, float* cif, int refCamID, float* offsetX, float* offsetY)
+float ComputeSimilarity(unsigned char* refImage, unsigned char* fltImage, int width, int height, int* boundingBox, float offsetX, float offsetY)
+{
+    int newX, newY;
+    float val1, val2, val3;
+    int cnt = 0;
+    float mean = 0.0f;
+    float res = -1;
+    for (int y = boundingBox[1]; y <= boundingBox[3]; y++) {
+        for (int x = boundingBox[0]; x <= boundingBox[2]; x++) {
+            newX = (int)(x + offsetX + 0.5f);
+            newY = (int)(y + offsetY + 0.5f);
+            if (newX >= 0 && newX < width && newY >= 0 && newY < height) {
+                val1 = (refImage[(x + y * width) * 3] - fltImage[(newX + newY * width) * 3]);
+                val2 = (refImage[(x + y * width) * 3 + 1] - fltImage[(newX + newY * width) * 3 + 1]);
+                val3 = (refImage[(x + y * width) * 3 + 2] - fltImage[(newX + newY * width) * 3 + 2]);
+                mean += (val1 * val1) + (val2 * val2) + (val3 * val3);
+                cnt++;
+            }
+        }
+    }
+    if (cnt > 0) {
+        res = mean / cnt;
+    }
+    return res;
+}
+float ComputeDepth(unsigned char* image, int width, int height, int numCam, int* boundingBox, float* c2w, float* w2c, float* cif, int refCamID, float* offsetX, float* offsetY)
 {
     float zValueCurrent;
     float zstep = ((1.0 / cif[refCamID * 3]) - (1.0 / cif[1 + refCamID * 3]));
-    int cnt;
-    int newX;
-    int newY;
-    float tmpMean;
-    float mean;
-    
     float optMean;
     float optZ;
-    float val1, val2, val3;
     int numAvailableCam;
+    float similarity;
+    float mean;
     optZ = -1.0;
     optMean = 10000000000;
     for (float zValue = 0.0; zValue < 10.0; zValue += 0.1) {
-        
         zValueCurrent = 1.0 / (zstep * zValue + 1.0 / cif[1 + refCamID * 3]);
         mean = 0.0f;
         numAvailableCam = 0;
         for (int i = 0; i < numCam; i++) {
             if (i == refCamID) continue;
-            ChangeOneStepOffset(width, height, &c2w[refCamID * 16], &c2w[i * 16], cif[2 + refCamID * 3], cif[2 + i * 3], zValueCurrent, offsetX[i], offsetY[i], boundingBox[0], boundingBox[1]);
-            cnt = 0;
-            tmpMean = 0.0f;
-            for (int y = boundingBox[1]; y <= boundingBox[3]; y++) {
-                for (int x = boundingBox[0]; x <= boundingBox[2]; x++) {
-                    newX = (int)(x + offsetX[i] + 0.5f);
-                    newY = (int)(y + offsetY[i] + 0.5f);
-                    if (newX >= 0 && newX < width && newY >= 0 && newY < height) {
-                        val1 = (image[(x + y * width + refCamID * width * height) * 3] - image[(newX + newY * width + i * width * height) * 3]);
-                        val2 = (image[(x + y * width + refCamID * width * height) * 3 + 1] - image[(newX + newY * width + i * width * height) * 3 + 1]);
-                        val3 = (image[(x + y * width + refCamID * width * height) * 3 + 2] - image[(newX + newY * width + i * width * height) * 3 + 2]);
-                        tmpMean += (val1 * val1) + (val2 * val2) + (val3 * val3);
-                        cnt++;
-                    }
-                }
-            }
-            if (cnt > 0) {
-                mean += tmpMean / cnt;
+            ChangeOneStepOffset(width, height, &c2w[refCamID * 16], &w2c[i * 16], cif[2 + refCamID * 3] * 4, cif[2 + i * 3] * 4, zValueCurrent, offsetX[i], offsetY[i], (boundingBox[0] + boundingBox[2]) / 2, (boundingBox[1] + boundingBox[3]) / 2);
+            similarity = ComputeSimilarity(&image[refCamID * width * height * 3], &image[i * width * height * 3], width, height, boundingBox, offsetX[i], offsetY[i]);
+            if (similarity >= 0) {
+                mean += similarity;
                 numAvailableCam++;
             }
         }
-        printf("%f, %f\n", zValueCurrent, mean);
+        //printf("%f, %f\n", zValueCurrent, mean / numAvailableCam);
         if (numAvailableCam > 0) {
             if (optMean > (mean / numAvailableCam)) {
                 optMean = mean / numAvailableCam;
-                optZ = zValue;
+                optZ = zValueCurrent;
             }
         }
     }
+    return optZ;
+}
+void ComputeOffset(unsigned char* image, int width, int height, int numCam, int* boundingBox, float* c2w, float* w2c, float* cif, int refCamID, float* offsetX, float* offsetY)
+{
+    float optZ = ComputeDepth(image, width, height, numCam, boundingBox, c2w, w2c, cif, refCamID, offsetX, offsetY);
     printf("%f\n", optZ);
     for (int i = 0; i < numCam; i++) {
-        ChangeOneStepOffset(width, height, &c2w[refCamID * 16], &c2w[i * 16], cif[2 + refCamID * 3], cif[2 + i * 3], optZ, offsetX[i], offsetY[i], boundingBox[0], boundingBox[1]);
+        ChangeOneStepOffset(width, height, &c2w[refCamID * 16], &w2c[i * 16], cif[2 + refCamID * 3] * 4, cif[2 + i * 3] * 4, optZ, offsetX[i], offsetY[i], (boundingBox[0] + boundingBox[2]) / 2, (boundingBox[1] + boundingBox[3]) / 2);
     }
 }
 int main()
