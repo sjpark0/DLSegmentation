@@ -2,7 +2,8 @@
 .venv/
 DLSegmentation/__pycache__
 DLSegmentation/env
-Data/
+Data/Sample1/images
+Data/Sample1/mpis_360
 detectron2/
 Mask2Former/
 MaskDINO/

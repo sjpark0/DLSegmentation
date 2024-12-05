@@ -42,20 +42,23 @@ model = build_model(cfg)
 DetectionCheckpointer(model).load(cfg.MODEL.WEIGHTS)
 model.eval()
 
-img = cv2.imread("../../Data/000.png")
-height, width = img.shape[:2]
-image = torch.as_tensor(img.astype("float32").transpose(2, 0, 1))
-image.to('cuda')
-inputs = {"image": image, "height": height, "width": width}
+numCam = 16
+for i in range(numCam):
+    img = cv2.imread("../../Data/Sample1/images/{:03d}.png".format(i))
+    height, width = img.shape[:2]
 
-prediction = model([inputs])[0]
+    image = torch.as_tensor(img.astype("float32").transpose(2, 0, 1))
+    image.to('cuda')
+    inputs = {"image": image, "height": height, "width": width}
 
-instances = prediction["instances"]
-instances = instances.to('cpu')
+    prediction = model([inputs])[0]
 
-masks = np.asarray(instances.pred_masks)
-masks = 255 * masks
-masks = masks.astype(np.uint8)
-res_mask = np.bitwise_or.reduce(masks, 0)
-    
-cv2.imwrite("detectron2.png", res_mask)
+    instances = prediction["instances"]
+    instances = instances.to('cpu')
+
+    masks = np.asarray(instances.pred_masks)
+    masks = 255 * masks
+    masks = masks.astype(np.uint8)
+    #res_mask = np.bitwise_or.reduce(masks, 0)
+    for j in range(masks.shape[0]):
+        cv2.imwrite("../../Data/Sample1/masks/detectron2_{:03d}_{:02d}.png".format(i, j), masks[j,::])

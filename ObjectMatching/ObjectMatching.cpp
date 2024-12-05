@@ -17,32 +17,44 @@ void ChangeOneStepOffset(int width, int height, float* refC2W, float* fltW2C, fl
     int newX, newY;
     int centerX = width / 2;
     int centerY = height / 2;
+    //printf("%f\n", zValue);
+    /*for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            printf("%f ", refC2W[i + j * 4]);
+        }
+        printf("\n");
+    }*/
+
     origin[0] = refC2W[12];
     origin[1] = refC2W[13];
     origin[2] = refC2W[14];
     origin[3] = refC2W[15];
-
+    //printf("%f, %f, %f, %f\n", origin[0], origin[1], origin[2], origin[3]);
+    //printf("%d, %d, %d, %d, %f, %f\n", ix, iy, centerX, centerY, (ix - centerX) / refFocal, (iy - centerY) / refFocal);
     dir[0] = refC2W[0] * ((ix - centerX) / refFocal) - refC2W[4] * ((iy - centerY) / refFocal) - refC2W[8];
     dir[1] = refC2W[1] * ((ix - centerX) / refFocal) - refC2W[5] * ((iy - centerY) / refFocal) - refC2W[9];
     dir[2] = refC2W[2] * ((ix - centerX) / refFocal) - refC2W[6] * ((iy - centerY) / refFocal) - refC2W[10];
     dir[3] = refC2W[3] * ((ix - centerX) / refFocal) - refC2W[7] * ((iy - centerY) / refFocal) - refC2W[11];
+    //printf("%f, %f, %f, %f\n", dir[0], dir[1], dir[2], dir[3]);
 
     t_origin[0] = fltW2C[0] * origin[0] + fltW2C[4] * origin[1] + fltW2C[8] * origin[2] + fltW2C[12] * origin[3];
     t_origin[1] = fltW2C[1] * origin[0] + fltW2C[5] * origin[1] + fltW2C[9] * origin[2] + fltW2C[13] * origin[3];
     t_origin[2] = fltW2C[2] * origin[0] + fltW2C[6] * origin[1] + fltW2C[10] * origin[2] + fltW2C[14] * origin[3];
     t_origin[3] = fltW2C[3] * origin[0] + fltW2C[7] * origin[1] + fltW2C[11] * origin[2] + fltW2C[15] * origin[3];
+    //printf("%f, %f, %f, %f\n", t_origin[0], t_origin[1], t_origin[2], t_origin[3]);
 
     t_dir[0] = fltW2C[0] * dir[0] + fltW2C[4] * dir[1] + fltW2C[8] * dir[2] + fltW2C[12] * dir[3];
     t_dir[1] = fltW2C[1] * dir[0] + fltW2C[5] * dir[1] + fltW2C[9] * dir[2] + fltW2C[13] * dir[3];
     t_dir[2] = fltW2C[2] * dir[0] + fltW2C[6] * dir[1] + fltW2C[10] * dir[2] + fltW2C[14] * dir[3];
     t_dir[3] = fltW2C[3] * dir[0] + fltW2C[7] * dir[1] + fltW2C[11] * dir[2] + fltW2C[15] * dir[3];
+    //printf("%f, %f, %f, %f\n", t_dir[0], t_dir[1], t_dir[2], t_dir[3]);
 
     tr = (-zValue - t_origin[2]) / t_dir[2];
 
     trans[0] = t_origin[0] + tr * t_dir[0];
     trans[1] = t_origin[1] + tr * t_dir[1];
     trans[2] = t_origin[2] + tr * t_dir[2];
-
+    //printf("%f, %f, %f, %f\n", tr, trans[0], trans[1], trans[2]);
     offsetX = trans[0] / -trans[2] * fltFocal + centerX - ix;
     offsetY = -(trans[1] / -trans[2] * fltFocal) + centerY - iy;
 }
@@ -136,6 +148,7 @@ float ComputeDepth(unsigned char* image, int width, int height, int numCam, int*
             if (i == refCamID) continue;
             ChangeOneStepOffset(width, height, &c2w[refCamID * 16], &w2c[i * 16], cif[2 + refCamID * 3] * 4, cif[2 + i * 3] * 4, zValueCurrent, offsetX[i], offsetY[i], (boundingBox[0] + boundingBox[2]) / 2, (boundingBox[1] + boundingBox[3]) / 2);
             similarity = ComputeSimilarity(&image[refCamID * width * height * 3], &image[i * width * height * 3], width, height, boundingBox, offsetX[i], offsetY[i]);
+            printf("%f, %f\n", zValueCurrent, similarity);
             if (similarity >= 0) {
                 mean += similarity;
                 numAvailableCam++;
@@ -168,6 +181,11 @@ int main()
     float* pC2W = new float[numCam * 16];
     float* pW2C = new float[numCam * 16];
     float* pCIF = new float[numCam * 3];
+    float* offsetX = new float[numCam];
+    float* offsetY = new float[numCam];
+    memset(offsetX, 0, numCam * sizeof(float));
+    memset(offsetY, 0, numCam * sizeof(float));
+
     int boundingBox[4];
     MPILoader(foldername, pC2W, pW2C, pCIF, numCam);
     
@@ -184,7 +202,36 @@ int main()
         memcpy(&pImage[c * width * height * 3], img.data, width * height * 3 * sizeof(unsigned char));
     }
     
-    img = Mat(height, width, CV_8UC3, &pImage[refCamID * width * height * 3]);
+    boundingBox[0] = 516;
+    boundingBox[1] = 724;
+    boundingBox[2] = 904;
+    boundingBox[3] = 1112;
+    /*float zValue = 67.625877;
+    for (int i = 0; i < numCam; i++) {
+        ChangeOneStepOffset(width, height, &pC2W[refCamID * 16], &pW2C[i * 16], pCIF[2 + refCamID * 3] * 4, pCIF[2 + i * 3] * 4, zValue, offsetX[i], offsetY[i], (boundingBox[0] + boundingBox[2]) / 2, (boundingBox[1] + boundingBox[3]) / 2);
+    }
+    for (int i = 0; i < numCam; i++) {
+        printf("%f, %f\n", offsetX[i], offsetY[i]);
+    }*/
+    Rect init_rect(boundingBox[0], boundingBox[1], boundingBox[2] - boundingBox[0], boundingBox[3] - boundingBox[1]);
+    ComputeOffset(pImage, width, height, numCam, boundingBox, pC2W, pW2C, pCIF, refCamID, offsetX, offsetY);
+    namedWindow("Visualize ROI", cv::WINDOW_NORMAL);
+    resizeWindow("Visualize ROI", width / 4, height / 4);
+    moveWindow("Visualize ROI", 0, 0);
+    for (int i = 0; i < numCam; i++) {
+        img = Mat(height, width, CV_8UC3, &pImage[i * width * height * 3]);
+        printf("%f, %f\n", offsetX[i], offsetY[i]);
+        rectangle(img, Rect((int)(boundingBox[0] + offsetX[i]), (int)(boundingBox[1] + offsetY[i]), init_rect.width, init_rect.height), Scalar(255, 0, 0), 2, 8, 0);
+        imshow("Visualize ROI", img);
+        getchar();
+        waitKey(1);
+    }
+
+    /*for (int i = 0; i < numCam; i++) {
+        printf("%f, %f\n", offsetX[i], offsetY[i]);
+    }*/
+    
+    /*img = Mat(height, width, CV_8UC3, &pImage[refCamID * width * height * 3]);
     Mat origin = img.clone();
     namedWindow("Select ROI", cv::WINDOW_NORMAL);
     resizeWindow("Select ROI", width / 4, height / 4);
@@ -201,11 +248,7 @@ int main()
 
     printf("%d, %d, %d, %d\n", boundingBox[0], boundingBox[1], boundingBox[2], boundingBox[3]);
 
-    float* offsetX = new float[numCam];
-    float* offsetY = new float[numCam];
-    memset(offsetX, 0, numCam * sizeof(float));
-    memset(offsetY, 0, numCam * sizeof(float));
-
+    
     ComputeOffset(pImage, width, height, numCam, boundingBox, pC2W, pW2C, pCIF, refCamID, offsetX, offsetY);
     
     namedWindow("Visualize ROI", cv::WINDOW_NORMAL);
@@ -218,7 +261,8 @@ int main()
         imshow("Visualize ROI", img);
         getchar();
         waitKey(1);
-    }
+    }*/
+
     /*img = Mat(height, width, CV_8UC3, &pImage[fltCamID * width * height * 3]);
     origin = img.clone();
     namedWindow("Visualize ROI", cv::WINDOW_NORMAL);
