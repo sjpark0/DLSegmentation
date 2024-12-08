@@ -79,45 +79,62 @@ def ComputeDepth(masks, boundingBoxes, w, h, c2w, w2c, focals, refCamID, close_d
         objCount.append(count)
 
     similarities = []
-    depths = []
-    for z in range(101):
+    ids = []
+    for z in range(101):    
         s0 = []
-        d0 = []
-        for i in range(len(masks)):
+        id0 = []
+        for j in range(len(masks[refCamID])):
             s1 = []
-            d1 = []
-            for j in range(len(masks[refCamID])):
-                s2 = []
-                d2 = []
-                for k in range(len(masks[i])):
-                    s2.append(0.0)
-                    d2.append(0.0)
-                s1.append(s2)
-                d1.append(d2)
+            id1 = []
+            for i in range(len(masks)):
+                s1.append(0.0)
+                id1.append(-1)
             s0.append(s1)
-            d0.append(d1)
+            id0.append(id1)
         similarities.append(s0)
-        depths.append(d0)
-
+        ids.append(id0)
     
     #for z in np.linspace(0, 10.0, 101):
     for z in range(101):
         zValueCurrent = 1.0 / (zstep * (float(z) / 10.0) + 1.0 / inf_depth)
         mean = 0.0
         numAvailableCam = 0
+        for j in range(len(masks[refCamID])):
+            for i in range(len(masks)):
+                if perms[i] == perms[refCamID]:
+                    continue
+                offsetX, offsetY = computeOffsetByZValue(w, h, c2w[perms[refCamID],:,:], w2c[perms[i],:,:], focals[perms[refCamID]], focals[perms[i]], zValueCurrent, 0, 0)
+                for k in range(len(masks[i])):
+                    overlapCount = computeOverlapCount(masks[refCamID][j], masks[i][k], boundingBoxes[refCamID][j], boundingBoxes[i][k], w, h, offsetX, offsetY)
+                    #similarities[z][j][i][k] = overlapCount / (objCount[refCamID][j] + objCount[i][k] - overlapCount)
+                    sim = overlapCount / (objCount[refCamID][j] + objCount[i][k] - overlapCount)
+                    if sim > similarities[z][j][i]:
+                        similarities[z][j][i] = sim
+                        ids[z][j][i] = k
+                    #    depths[i][j][k] = zValueCurrent 
+    correspondingID = []
+    depths = []
+    for j in range(len(masks[refCamID])):
+        c0 = []
+        d0 = []
+        for i in range(len(masks)):
+            c0.append(j)
+            d0.append(0.0)
+        correspondingID.append(c0)
+        depths.append(d0)
+
+    for j in range(len(masks[refCamID])):
         for i in range(len(masks)):
             if perms[i] == perms[refCamID]:
                 continue
-            offsetX, offsetY = computeOffsetByZValue(w, h, c2w[perms[refCamID],:,:], w2c[perms[i],:,:], focals[perms[refCamID]], focals[perms[i]], zValueCurrent, 0, 0)
-            for j in range(len(masks[refCamID])):
-                for k in range(len(masks[i])):
-                    overlapCount = computeOverlapCount(masks[refCamID][j], masks[i][k], boundingBoxes[refCamID][j], boundingBoxes[i][k], w, h, offsetX, offsetY)
-                    similarities[z][i][j][k] = overlapCount / (objCount[refCamID][j] + objCount[i][k] - overlapCount)
-                    #sim = overlapCount / (objCount[refCamID][j] + objCount[i][k] - overlapCount)
-                    #if sim > similarities[i][j][k]:
-                    #    similarities[i][j][k] = sim
-                    #    depths[i][j][k] = zValueCurrent 
-    return similarities
+            sim = 0.0
+            for z in range(101):
+                if similarities[z][j][i] > sim:
+                    sim = similarities[z][j][i]
+                    correspondingID[j][i] = ids[z][j][i]
+                    depths[j][i] = zValueCurrent = 1.0 / (zstep * (float(z) / 10.0) + 1.0 / inf_depth)
+
+    return correspondingID, depths
 
 def computeOffset(masks, boundingBoxes, w, h, c2w, w2c, focals, refCamID, close_depth, inf_depth, perms):
     offsetX = []
@@ -125,19 +142,12 @@ def computeOffset(masks, boundingBoxes, w, h, c2w, w2c, focals, refCamID, close_
     
     opt_sim = 0
     opt_id = -1
-    similarities, depths = ComputeDepth(masks, boundingBoxes, w, h, c2w, w2c, focals, refCamID, close_depth, inf_depth, perms)
+    correspondingID, depths = ComputeDepth(masks, boundingBoxes, w, h, c2w, w2c, focals, refCamID, close_depth, inf_depth, perms)
     for j in range(len(masks[refCamID])):
         for i in range(len(masks)):
             if i != refCamID:
-                opt_id = -1
-                opt_sim = 0
-                for k in range(len(masks[i])):
-                    if similarities[i][j][k] > opt_sim:
-                        opt_sim = similarities[i][j][k]
-                        opt_id = k
-                print(i, j, opt_id, depths[i][j][opt_id], similarities[i][j][opt_id], opt_sim)
                 cv2.imshow("Image1", masks[refCamID][j])
-                cv2.imshow("Image2", masks[i][opt_id])
+                cv2.imshow("Image2", masks[i][correspondingID[j][i]])
                 cv2.waitKey(0)
             #print(i, j, k, depths[i][j][k], similarities[i][j][k])
     #for i in range(len(masks)):
