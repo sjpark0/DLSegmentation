@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include "MaskMatching.h"
 using namespace cv;
 void ChangeOneStepOffset(int width, int height, float* refC2W, float* fltW2C, float refFocal, float fltFocal, float zValue, float& offsetX, float& offsetY, int pointX, int pointY)
 {
@@ -177,8 +178,14 @@ int main()
     char foldername[] = "..\\Data\\Sample1";
     char filename[1024];
 
-    int numCam = 16;
-    float* pC2W = new float[numCam * 16];
+    int numCam = 2;
+
+    MaskMatching matcher;
+    matcher.LoadMaskImage(foldername, "detectron2", numCam);
+    matcher.LoadMPI(foldername, numCam);
+    matcher.ComputeDepth(0);
+    matcher.Display(0);
+    /*float* pC2W = new float[numCam * 16];
     float* pW2C = new float[numCam * 16];
     float* pCIF = new float[numCam * 3];
     float* offsetX = new float[numCam];
@@ -206,13 +213,7 @@ int main()
     boundingBox[1] = 724;
     boundingBox[2] = 904;
     boundingBox[3] = 1112;
-    /*float zValue = 67.625877;
-    for (int i = 0; i < numCam; i++) {
-        ChangeOneStepOffset(width, height, &pC2W[refCamID * 16], &pW2C[i * 16], pCIF[2 + refCamID * 3] * 4, pCIF[2 + i * 3] * 4, zValue, offsetX[i], offsetY[i], (boundingBox[0] + boundingBox[2]) / 2, (boundingBox[1] + boundingBox[3]) / 2);
-    }
-    for (int i = 0; i < numCam; i++) {
-        printf("%f, %f\n", offsetX[i], offsetY[i]);
-    }*/
+    
     Rect init_rect(boundingBox[0], boundingBox[1], boundingBox[2] - boundingBox[0], boundingBox[3] - boundingBox[1]);
     ComputeOffset(pImage, width, height, numCam, boundingBox, pC2W, pW2C, pCIF, refCamID, offsetX, offsetY);
     namedWindow("Visualize ROI", cv::WINDOW_NORMAL);
@@ -227,118 +228,15 @@ int main()
         waitKey(1);
     }
 
-    /*for (int i = 0; i < numCam; i++) {
-        printf("%f, %f\n", offsetX[i], offsetY[i]);
-    }*/
     
-    /*img = Mat(height, width, CV_8UC3, &pImage[refCamID * width * height * 3]);
-    Mat origin = img.clone();
-    namedWindow("Select ROI", cv::WINDOW_NORMAL);
-    resizeWindow("Select ROI", width / 4, height / 4);
-    moveWindow("Select ROI", 0, 0);
-    waitKey(1);
-    Rect init_rect = selectROI("Select ROI", img, true, false); // ROI 박스 치기
-    waitKey(0);
-    destroyWindow("Select ROI");
-    
-    boundingBox[0] = init_rect.x;
-    boundingBox[1] = init_rect.y;
-    boundingBox[2] = init_rect.x + init_rect.width;
-    boundingBox[3] = init_rect.y + init_rect.height;
-
-    printf("%d, %d, %d, %d\n", boundingBox[0], boundingBox[1], boundingBox[2], boundingBox[3]);
-
-    
-    ComputeOffset(pImage, width, height, numCam, boundingBox, pC2W, pW2C, pCIF, refCamID, offsetX, offsetY);
-    
-    namedWindow("Visualize ROI", cv::WINDOW_NORMAL);
-    resizeWindow("Visualize ROI", width / 4, height / 4);
-    moveWindow("Visualize ROI", 0, 0);
-    for (int i = 0; i < numCam; i++) {
-        img = Mat(height, width, CV_8UC3, &pImage[i * width * height * 3]);
-        printf("%f, %f\n", offsetX[i], offsetY[i]);
-        rectangle(img, Rect((int)(boundingBox[0] + offsetX[i]), (int)(boundingBox[1] + offsetY[i]), init_rect.width, init_rect.height), Scalar(255, 0, 0), 2, 8, 0);
-        imshow("Visualize ROI", img);
-        getchar();
-        waitKey(1);
-    }*/
-
-    /*img = Mat(height, width, CV_8UC3, &pImage[fltCamID * width * height * 3]);
-    origin = img.clone();
-    namedWindow("Visualize ROI", cv::WINDOW_NORMAL);
-    resizeWindow("Visualize ROI", width / 4, height / 4);
-    moveWindow("Visualize ROI", 0, 0);
-    waitKey(1);
-    float zstep = ((1.0 / pCIF[refCamID * 3]) - (1.0 / pCIF[1 + refCamID * 3]));
-    float zValueCurrent;
-    for (float zValue = 0.0; zValue < 1.0; zValue += 0.1) {
-        zValueCurrent = 1.0 / (zstep * zValue + 1.0 / pCIF[1 + refCamID * 3]);
-
-        ChangeOneStepOffset(width, height, &pC2W[refCamID * 16], &pW2C[fltCamID * 16], pCIF[2 + refCamID * 3], pCIF[2 + fltCamID * 3], zValueCurrent, offsetX[fltCamID], offsetY[fltCamID], boundingBox[0], boundingBox[1]);
-        //ChangeOneStepOffset(width, height, &pC2W[refCamID * 16], &pW2C[fltCamID * 16], pCIF[2 + refCamID * 3], pCIF[2 + fltCamID * 3], zValueCurrent, offsetX[fltCamID], offsetY[fltCamID], 0, 0);
-        printf("%f, %f, %f\n", zValueCurrent, offsetX[fltCamID], offsetY[fltCamID]);
-        img = origin.clone();
-        rectangle(img, Rect((int)(boundingBox[0] + offsetX[fltCamID]), (int)(boundingBox[1] + offsetY[fltCamID]), init_rect.width, init_rect.height), Scalar(255, 0, 0), 2, 8, 0);
-        imshow("Visualize ROI", img);
-        getchar();
-        waitKey(1);
-    }*/
-    /*float zValue;
-    float offsetX1, offsetX2, offsetY1, offsetY2;
-    zValue = 0.0;
-    zValueCurrent = 1.0 / (zstep * zValue + 1.0 / pCIF[1 + refCamID * 3]);
-    ChangeOneStepOffset(width, height, &pC2W[refCamID * 16], &pW2C[fltCamID * 16], pCIF[2 + refCamID * 3], pCIF[2 + fltCamID * 3], zValueCurrent, offsetX1, offsetY1, width / 2, height / 2);
-
-    
-    zValue = 1.0;
-    zValueCurrent = 1.0 / (zstep * zValue + 1.0 / pCIF[1 + refCamID * 3]);
-    ChangeOneStepOffset(width, height, &pC2W[refCamID * 16], &pW2C[fltCamID * 16], pCIF[2 + refCamID * 3], pCIF[2 + fltCamID * 3], zValueCurrent, offsetX2, offsetY2, width / 2, height / 2);
-
-    printf("%f, %f\n", boundingBox[0] + offsetX1, boundingBox[1] + offsetY1);
-    printf("%f, %f\n", boundingBox[0] + offsetX2, boundingBox[1] + offsetY2);
-
-    
-    zValue = 0.0;
-    zValueCurrent = 1.0 / (zstep * zValue + 1.0 / pCIF[1 + refCamID * 3]);
-    ChangeOneStepOffset(width, height, &pC2W[refCamID * 16], &pW2C[fltCamID * 16], pCIF[2 + refCamID * 3], pCIF[2 + fltCamID * 3], zValueCurrent, offsetX1, offsetY1, 0, 0);
-
-    
-    zValue = 1.0;
-    zValueCurrent = 1.0 / (zstep * zValue + 1.0 / pCIF[1 + refCamID * 3]);
-    ChangeOneStepOffset(width, height, &pC2W[refCamID * 16], &pW2C[fltCamID * 16], pCIF[2 + refCamID * 3], pCIF[2 + fltCamID * 3], zValueCurrent, offsetX2, offsetY2, 0, 0);
-
-    printf("%f, %f\n", boundingBox[0] + offsetX1, boundingBox[1] + offsetY1);
-    printf("%f, %f\n", boundingBox[0] + offsetX2, boundingBox[1] + offsetY2);*/
-
-    //rectangle(img, Rect((int)(boundingBox[0] + offsetX[fltCamID]), (int)(boundingBox[1] + offsetY[fltCamID]), init_rect.width, init_rect.height), Scalar(255, 0, 0), 2, 8, 0);
-    //imshow("Visualize ROI", img);
-    //waitKey(0);
     destroyWindow("Visualize ROI");
     delete[]pC2W;
     delete[]pW2C;
     delete[]pCIF;
     delete[]offsetX;
     delete[]offsetY;
-    delete[]pImage;
-    /*for (int c = 0; c < numCam; c++) {
-        printf("%dth camera\n", c);
-        for (int i = 0; i < 4; i++) {
-            for (int j = 0; j < 4; j++) {
-                printf("%.3f ", pC2W[j + i * 4 + c * 16]);
-            }
-            printf("\n");
-        }
-    }
-
-    for (int c = 0; c < numCam; c++) {
-        printf("%dth camera\n", c);
-        for (int i = 0; i < 4; i++) {
-            for (int j = 0; j < 4; j++) {
-                printf("%.3f ", pW2C[j + i * 4 + c * 16]);
-            }
-            printf("\n");
-        }
-    }*/
+    delete[]pImage;*/
+    
 }
 
 // 프로그램 실행: <Ctrl+F5> 또는 [디버그] > [디버깅하지 않고 시작] 메뉴
