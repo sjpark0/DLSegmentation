@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-
+import time
 from llff.poses.pose_utils import load_colmap_data
 
 def computecloseInfinity(poses, pts3d, perm):
@@ -199,4 +199,9 @@ height = img.shape[0]
 focals = poses[2, 4, :]
 
 boxes, masks = maskLoader("../../Data/Sample1/masks", "detectron2", 2)
+
+start = time.time()
 computeOffset(masks, boxes, width, height, c2w, w2c, focals, refCamID, close_depth, inf_depth, perms)
+end = time.time()
+
+print(end - start)

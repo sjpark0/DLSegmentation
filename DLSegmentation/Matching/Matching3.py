@@ -1,7 +1,7 @@
-import MaskMatching
+import MaskMatchingTorch
 import time
 
-t = MaskMatching.MaskMatching('../../Data/Sample1')
+t = MaskMatchingTorch.MaskMatchingTorch('../../Data/Sample1')
 t.MaskLoader('../../Data/Sample1/masks', 'detectron2', 2)
 
 start = time.time()
