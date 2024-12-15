@@ -112,7 +112,7 @@ class MaskMatchingTorch:
         for i in range(len(self.masks)):
             count = []
             for j in range(len(self.masks[i])):
-                coords = np.where(self.masks[i][j] == 255)
+                coords = torch.where(self.masks[i][j] == 255)
                 count.append(coords[0].shape[0])
             objCount.append(count)
 
