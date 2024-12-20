@@ -2,21 +2,178 @@
 //
 
 #include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <cstdint>
+struct Camera {
+	uint32_t id;
+	uint32_t model;
+	uint64_t width;
+	uint64_t height;
+	std::vector<float> params;
+};
+std::vector<Camera> LoadCameras(const std::string& path) {
+	std::vector<Camera> cameras;
+
+	std::ifstream file(path, std::ios::binary);
+	if (!file.is_open()) {
+		throw std::runtime_error("Failed to open cameras.bin");
+	}
+	printf("here!!\n");
+	while (!file.eof()) {
+		Camera camera;
+		printf("here!!\n");
+
+		file.read(reinterpret_cast<char*>(&camera.id), sizeof(camera.id));
+
+		file.read(reinterpret_cast<char*>(&camera.model), sizeof(camera.model));
+		file.read(reinterpret_cast<char*>(&camera.width), sizeof(camera.width));
+		file.read(reinterpret_cast<char*>(&camera.height), sizeof(camera.height));
+
+		uint64_t num_params;
+		file.read(reinterpret_cast<char*>(&num_params), sizeof(num_params));
+		camera.params.resize(num_params);
+		file.read(reinterpret_cast<char*>(camera.params.data()), num_params * sizeof(float));
+
+		if (!file.eof()) {
+			cameras.push_back(camera);
+		}
+	}
+
+	file.close();
+	return cameras;
+}
+struct Image {
+	uint64_t id;
+	std::vector<float> quaternion;  // 4 elements
+	std::vector<float> position;    // 3 elements
+	uint64_t camera_id;
+	std::string name;
+	std::vector<std::pair<std::vector<float>, int64_t>> points2D;
+};
+
+std::vector<Image> LoadImages(const std::string& path) {
+	std::vector<Image> images;
+
+	std::ifstream file(path, std::ios::binary);
+	if (!file.is_open()) {
+		throw std::runtime_error("Failed to open images.bin");
+	}
+
+	while (!file.eof()) {
+		Image image;
+		file.read(reinterpret_cast<char*>(&image.id), sizeof(image.id));
+
+		image.quaternion.resize(4);
+		file.read(reinterpret_cast<char*>(image.quaternion.data()), 4 * sizeof(float));
+
+		image.position.resize(3);
+		file.read(reinterpret_cast<char*>(image.position.data()), 3 * sizeof(float));
+
+		file.read(reinterpret_cast<char*>(&image.camera_id), sizeof(image.camera_id));
+
+		char name_char;
+		while (file.read(&name_char, sizeof(char)) && name_char != '\0') {
+			image.name += name_char;
+		}
+
+		uint64_t num_points2D;
+		file.read(reinterpret_cast<char*>(&num_points2D), sizeof(num_points2D));
+
+		for (uint64_t i = 0; i < num_points2D; ++i) {
+			std::vector<float> point2D(2);
+			file.read(reinterpret_cast<char*>(point2D.data()), 2 * sizeof(float));
+
+			int64_t point3D_id;
+			file.read(reinterpret_cast<char*>(&point3D_id), sizeof(point3D_id));
+
+			image.points2D.emplace_back(point2D, point3D_id);
+		}
+
+		if (!file.eof()) {
+			images.push_back(image);
+		}
+	}
+
+	file.close();
+	return images;
+}
+struct Point3D {
+	uint64_t id;
+	std::vector<float> xyz; // 3 elements
+	std::vector<uint8_t> rgb; // 3 elements
+	int64_t visibility;
+};
+
+std::vector<Point3D> LoadPoints3D(const std::string& path) {
+	std::vector<Point3D> points3D;
+
+	std::ifstream file(path, std::ios::binary);
+	if (!file.is_open()) {
+		throw std::runtime_error("Failed to open points3D.bin");
+	}
+
+	while (!file.eof()) {
+		Point3D point;
+		file.read(reinterpret_cast<char*>(&point.id), sizeof(point.id));
+
+		point.xyz.resize(3);
+		file.read(reinterpret_cast<char*>(point.xyz.data()), 3 * sizeof(float));
+
+		point.rgb.resize(3);
+		file.read(reinterpret_cast<char*>(point.rgb.data()), 3 * sizeof(uint8_t));
+
+		file.read(reinterpret_cast<char*>(&point.visibility), sizeof(point.visibility));
+
+		if (!file.eof()) {
+			points3D.push_back(point);
+		}
+	}
+
+	file.close();
+	return points3D;
+}
 
 int main()
 {
     FILE* fp;
     char foldername[] = "..\\Data\\Sample1\\sparse\\0";
     char filename[1024];
+	int numCamera = 16;
+	double* mat = new double[numCamera * 9];
+	double* vec = new double[numCamera * 3];
+	double* focal = new double[numCamera];
+	double cDepth;
+	double iDepth;
 
-    //sprintf_s(filename, "%s\\cameras.bin", foldername);
-    sprintf_s(filename, "%s\\images.bin", foldername);
-    //sprintf_s(filename, "%s\\points3D.bin", foldername);
+	sprintf_s(filename, "%s\\camears.bin", foldername);
+	auto cameras = LoadCameras(filename);
+	std::cout << "Loaded " << cameras.size() << " cameras." << std::endl;
 
-    int64_t num;
-    fopen_s(&fp, filename, "rb");
-    fread(&num, sizeof(int64_t), 1, fp);
-    printf("%d\n", num);
+	sprintf_s(filename, "%s\\images.bin", foldername);
+	auto images = LoadImages(filename);
+	std::cout << "Loaded " << images.size() << " images." << std::endl;
+
+	sprintf_s(filename, "%s\\points3D.bin", foldername);
+	auto points3D = LoadPoints3D(filename);
+	std::cout << "Loaded " << points3D.size() << " 3D points." << std::endl;
+
+	/*for (int i = 0; i < numCamera; i++) {
+		printf("%dth Camera\n", i);
+		for (int j = 0; j < 3; j++) {
+			for (int k = 0; k < 3; k++) {
+				printf("%f ", mat[k + j * 3 + i * 9]);
+			}
+			printf("\n");
+		}
+		for (int j = 0; j < 3; j++) {
+			printf("%f ", vec[j + i * 3]);
+		}
+		printf("%f\n", focal[i]);
+	}
+	printf("%f, %f\n", cDepth, iDepth);*/
+    
 }
 
 // 프로그램 실행: <Ctrl+F5> 또는 [디버그] > [디버깅하지 않고 시작] 메뉴
