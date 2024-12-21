@@ -14,6 +14,10 @@ class MaskMatching:
         self.width = img.shape[1]
         self.height = img.shape[0]
         self.focals = poses[2, 4, :]
+        for i in self.perms:
+            print(self.w2c[self.perms[i],:,:])
+            print(self.focals[self.perms[i]])
+        print(self.close_depth, self.inf_depth)
 
     def ComputeCloseInfinity(self, poses, pts3d):
         pts_arr = []
@@ -27,7 +31,10 @@ class MaskMatching:
 
         pts_arr = np.array(pts_arr)
         vis_arr = np.array(vis_arr)
-        
+        #print(poses[:3, 3:4, :].shape)
+        #print(poses[:3, 2:3, :])
+        print(poses.shape)
+        print(poses)
         zvals = np.sum(-(pts_arr[:, np.newaxis, :].transpose([2,0,1]) - poses[:3, 3:4, :]) * poses[:3, 2:3, :], 0)
         valid_z = zvals[vis_arr==1]
         
