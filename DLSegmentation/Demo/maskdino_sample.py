@@ -30,33 +30,40 @@ def maskdino_fn():
     cfg.merge_from_file(config)
     cfg.MODEL.WEIGHTS = checkpoint
 
+    #이거 잘 안됨. maskdino_sample1.py부분 참고하여 수정 필요함.
     model = build_model(cfg)
     model.eval()
     checkpointer = DetectionCheckpointer(model)
     checkpointer.load(cfg.MODEL.WEIGHTS)
     
     with torch.no_grad():
-        height, width = img.shape[:2]
-        image = torch.as_tensor(img.astype("float32").transpose(2, 0, 1))
-        image.to('cuda')
+        for i in range(1):
+            inputfilename = "../../Data/Set1/images/{:02d}".format(i+1) + ".png"
+            outputfilename = "../../Data/Set1/seg/{:02d}".format(i+1) + ".png"
+            img = cv2.imread(inputfilename)
+            
+            height, width = img.shape[:2]        
+            image = torch.as_tensor(img.astype("float32").transpose(2, 0, 1))
+            image.to('cuda')
+            inputs = {"image": image, "height": height, "width": width}
 
-        inputs = {"image": image, "height": height, "width": width}
+            prediction = model([inputs])[0]
 
-        prediction = model([inputs])[0]
+            instances = prediction["instances"]
+            instances = instances.to('cpu')
 
-    print(prediction)
-    
-    instances = prediction["instances"]
-    
+            masks = np.asarray(instances.pred_masks)
+            masks = 255 * masks
+            masks = masks.astype(np.uint8)
 
-    instances = instances.to('cpu')
+            #res_mask = np.bitwise_or.reduce(masks, 0)    
+            #cv2.imwrite(outputfilename, res_mask)
+            print(instances)
+            print(masks.shape)
+            for j in range(masks.shape[0]):
+                cv2.imwrite("../../Data/Set1/seg/maskdino_{:03d}_{:02d}.png".format(i, j), masks[j,::])
 
-    masks = np.asarray(instances.pred_masks)
-    masks = 255 * masks
-    masks = masks.astype(np.uint8)
-    res_mask = np.bitwise_or.reduce(masks, 0)
-    
-    cv2.imwrite("maskdino.png", res_mask)
-    return res_mask
+            
+    #return res_mask
 
 maskdino_fn()
