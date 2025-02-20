@@ -6,7 +6,7 @@ sys.path.append('../../MaskDINO')
 import numpy as np
 import torch, torchvision
 import cv2
-
+import os
 from detectron2.modeling import build_model
 from detectron2.data import MetadataCatalog
 from detectron2.engine.defaults import DefaultPredictor
@@ -34,9 +34,11 @@ def maskdino_fn():
     numCam = 16
     
     for m in range(13):
+        os.makedirs("../../Data/Test/Set{:0d}/seg_maskdino".format(m+1), exist_ok=True)
+        
         for i in range(numCam):
             inputfilename = "../../Data/Test/Set{:0d}/images/{:02d}".format(m+1, i+1) + ".png"
-            outputfilename = "../../Data/Test/Set{:0d}/seg/{:02d}".format(m+1, i+1) + ".png"
+            outputfilename = "../../Data/Test/Set{:0d}/seg_maskdino/{:02d}".format(m+1, i+1) + ".png"
                 
             img = cv2.imread(inputfilename)
             height, width = img.shape[:2]
@@ -61,7 +63,7 @@ def maskdino_fn():
             cv2.imwrite(outputfilename, res_mask)
 
             inputfilename = "../../Data/Test/Set{:0d}/images/{:02d}".format(m+1, i+21) + ".png"
-            outputfilename = "../../Data/Test/Set{:0d}/seg/{:02d}".format(m+1, i+21) + ".png"
+            outputfilename = "../../Data/Test/Set{:0d}/seg_maskdino/{:02d}".format(m+1, i+21) + ".png"
                 
             img = cv2.imread(inputfilename)
             height, width = img.shape[:2]

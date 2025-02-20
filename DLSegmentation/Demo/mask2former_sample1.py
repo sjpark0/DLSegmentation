@@ -5,7 +5,7 @@ sys.path.append('../../Mask2Former')
 import numpy as np
 import torch, torchvision
 import cv2
-
+import os
 from detectron2.data import MetadataCatalog
 from detectron2.engine.defaults import DefaultPredictor
 from detectron2.utils.visualizer import ColorMode
@@ -16,19 +16,21 @@ from detectron2.structures import BitMasks
 
 from mask2former import add_maskformer2_config
 
-config = "./configs/coco/instance-segmentation/swin/maskformer2_swin_large_IN21k_384_bs16_100ep.yaml"
-checkpoint = "../../models/model_final_e5f453.pkl"
+def mask2former_fn():
+    config = "./configs/coco/instance-segmentation/swin/maskformer2_swin_large_IN21k_384_bs16_100ep.yaml"
+    checkpoint = "../../models/model_final_e5f453.pkl"
 
-cfg = get_cfg()
-add_deeplab_config(cfg)
-add_maskformer2_config(cfg)
-cfg.merge_from_file(config)
-cfg.MODEL.WEIGHTS = checkpoint
+    cfg = get_cfg()
+    add_deeplab_config(cfg)
+    add_maskformer2_config(cfg)
+    cfg.merge_from_file(config)
+    cfg.MODEL.WEIGHTS = checkpoint
 
-predictor = DefaultPredictor(cfg)
+    predictor = DefaultPredictor(cfg)
 
-numCam = 16
-for m in range(13):
+    numCam = 16
+    for m in range(13):
+        os.makedirs("../../Data/Test/Set{:0d}/seg_maskformer".format(m+1), exist_ok=True)
         for i in range(numCam):
             inputfilename = "../../Data/Test/Set{:0d}/images/{:02d}".format(m+1, i+1) + ".png"
             outputfilename = "../../Data/Test/Set{:0d}/seg_maskformer/{:02d}".format(m+1, i+1) + ".png"
@@ -79,3 +81,5 @@ for m in range(13):
                     #res_mask = res_mask | masks[j,...]
             res_mask = cv2.resize(res_mask, dsize=(960, 540))
             cv2.imwrite(outputfilename, res_mask)
+
+mask2former_fn()
